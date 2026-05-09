@@ -59,9 +59,16 @@ class InvertedIndex:
         if not tokens:
             return []
 
-        # Nếu term sau preprocess thành nhiều token, lấy token đầu tiên.
-        token = tokens[0]
-        return self.postings.get(token, [])
+        if len(tokens) == 1:
+            return self.postings.get(tokens[0], [])
+
+        # Nếu người dùng truyền cụm từ, lấy AND giữa các token
+        result = set(self.postings.get(tokens[0], []))
+
+        for token in tokens[1:]:
+            result &= set(self.postings.get(token, []))
+
+        return sorted(result)
 
     def save(self, path: str | Path) -> None:
         path = Path(path)

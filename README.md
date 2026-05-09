@@ -1,42 +1,40 @@
 # Vietnamese Legal Document Retrieval
 
-## 1. Giới thiệu
+Dự án xây dựng hệ thống truy xuất văn bản pháp luật tiếng Việt bằng các kỹ thuật **Information Retrieval** cơ bản. Project tập trung vào việc tự cài đặt các thành phần chính thay vì dùng search engine có sẵn như Apache Lucene.
 
-Dự án xây dựng hệ thống truy xuất văn bản pháp luật tiếng Việt sử dụng các kỹ thuật Information Retrieval cơ bản.
+## 1. Mục tiêu
 
-Hệ thống hỗ trợ so sánh 3 thuật toán:
+Project hướng tới các mục tiêu:
 
-1. Boolean Retrieval
-2. TF-IDF + Cosine Similarity
-3. BM25
-
-Mục tiêu của project:
-
-* Hiểu cơ chế hoạt động của hệ thống truy xuất thông tin.
-* Tự cài đặt inverted index.
-* Tự cài đặt TF-IDF và BM25.
-* Đánh giá bằng các metric IR phổ biến.
-* Áp dụng trên dữ liệu pháp luật tiếng Việt.
-
----
+- Chuẩn hóa dữ liệu pháp luật tiếng Việt thành `corpus`, `queries`, `qrels`.
+- Tiền xử lý văn bản tiếng Việt bằng chuẩn hóa text, tokenizer và stopwords.
+- Xây dựng **Inverted Index**.
+- Cài đặt và so sánh 3 phương pháp truy xuất:
+  - Boolean Retrieval
+  - TF-IDF + Cosine Similarity
+  - BM25
+- Đánh giá kết quả bằng các metric IR: Precision@K, Recall@K, MAP, nDCG@K.
 
 ## 2. Dataset sử dụng
 
 ### Dataset chính
 
-Vietnamese Legal Documents Dataset:
+- Vietnamese Legal Documents Dataset
+- Link: <https://huggingface.co/datasets/YuITC/Vietnamese-Legal-Documents>
+- Tên repo khi load bằng Hugging Face:
 
-[https://huggingface.co/datasets/YuITC/Vietnamese-Legal-Documents](https://huggingface.co/datasets/YuITC/Vietnamese-Legal-Documents)
+```python
+YuITC/Vietnamese-Legal-Documents
+```
 
 ### Raw data
 
-[https://huggingface.co/datasets/tmnam20/BKAI-Legal-Retrieval](https://huggingface.co/datasets/tmnam20/BKAI-Legal-Retrieval)
-
----
+- BKAI Legal Retrieval
+- Link: <https://huggingface.co/datasets/tmnam20/BKAI-Legal-Retrieval>
 
 ## 3. Cấu trúc dữ liệu
 
-Dataset hiện gồm các split:
+Dataset gồm 2 split chính:
 
 ```text
 train
@@ -45,73 +43,41 @@ test
 
 Các cột chính:
 
-| Column       | Ý nghĩa                      |
-| ------------ | ---------------------------- |
-| qid          | Query ID                     |
-| question     | Câu hỏi pháp luật tiếng Việt |
-| cid          | Danh sách document liên quan |
-| context_list | Nội dung văn bản liên quan   |
+| Cột | Ý nghĩa |
+|---|---|
+| `qid` | ID của câu hỏi / query |
+| `question` | Câu hỏi pháp luật tiếng Việt |
+| `cid` | Danh sách ID văn bản liên quan |
+| `context_list` | Danh sách nội dung văn bản liên quan |
 
----
+Sau khi chuẩn hóa, dữ liệu được chuyển sang dạng phù hợp với bài toán IR:
 
-## 4. Ánh xạ sang bài toán IR
+| Thành phần IR | File sinh ra | Ý nghĩa |
+|---|---|---|
+| Corpus | `data/processed/corpus.json` | Tập văn bản pháp luật, ánh xạ `doc_id -> text` |
+| Queries | `data/processed/queries.json` | Tập câu hỏi, ánh xạ `qid -> question` |
+| Qrels | `data/processed/qrels.json` | Ground truth, ánh xạ `qid -> list[doc_id]` |
 
-| Thành phần IR | Dataset      |
-| ------------- | ------------ |
-| Query         | question     |
-| Query ID      | qid          |
-| Document      | context_list |
-| Document ID   | cid          |
-| Ground Truth  | qid -> cid   |
-
-Sau khi chuẩn hóa dữ liệu, project sẽ tạo:
-
-```text
-data/processed/corpus.json
-data/processed/queries.json
-data/processed/qrels.json
-```
-
----
-
-## 5. Công nghệ sử dụng
-
-| Thành phần            | Công nghệ             |
-| --------------------- | --------------------- |
-| Ngôn ngữ              | Python                |
-| Dataset Loader        | Hugging Face datasets |
-| Tiền xử lý tiếng Việt | underthesea           |
-| Tính toán             | numpy, pandas         |
-| Evaluation            | numpy                 |
-
----
-
-## 6. Cấu trúc thư mục project
+## 4. Cấu trúc thư mục
 
 ```text
 vietnamese-legal-ir/
-│
 ├── README.md
 ├── requirements.txt
-├── .gitignore
-│
 ├── configs/
 │   └── config.yaml
-│
 ├── data/
 │   ├── raw/
 │   ├── processed/
 │   │   ├── corpus.json
 │   │   ├── queries.json
 │   │   └── qrels.json
-│   │
 │   └── sample/
-│
 ├── outputs/
 │   ├── indexes/
+│   │   └── inverted_index.json
 │   ├── results/
 │   └── reports/
-│
 ├── src/
 │   ├── data/
 │   ├── preprocessing/
@@ -119,39 +85,18 @@ vietnamese-legal-ir/
 │   ├── retrieval/
 │   ├── evaluation/
 │   └── app/
-│
 ├── notebooks/
 └── tests/
 ```
 
----
-
-## 7. Tạo repository GitHub
-
-### Tạo repo
-
-Tạo repository mới trên GitHub:
-
-```text
-vietnamese-legal-ir
-```
-
-Clone repo:
-
-```bash
-git clone https://github.com/USERNAME/vietnamese-legal-ir.git
-cd vietnamese-legal-ir
-```
-
----
-
-## 8. Tạo môi trường Python
+## 5. Cài đặt môi trường
 
 ### Windows PowerShell
 
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
 ```
 
 ### Linux / macOS
@@ -159,111 +104,56 @@ python -m venv .venv
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-```
-
----
-
-## 9. Cài thư viện
-
-### Cài requirements
-
-```bash
 python -m pip install -r requirements.txt
 ```
 
-### requirements.txt
-
-```text
-datasets
-pandas
-numpy
-scikit-learn
-underthesea
-pyyaml
-tqdm
-pytest
-```
-
-Lưu ý:
-
-Trên Windows nên luôn dùng:
-
-```bash
-python -m pip install ...
-```
-
-không nên dùng trực tiếp:
-
-```bash
-pip install ...
-```
-
-để tránh lỗi lệch môi trường virtual environment.
-
----
-
-## 10. Kiểm tra môi trường
-
-Kiểm tra Python đang dùng:
+Kiểm tra Python đang dùng đúng môi trường ảo:
 
 ```powershell
 python -c "import sys; print(sys.executable)"
 ```
 
-Kiểm tra datasets:
+Kiểm tra thư viện `datasets`:
 
 ```powershell
 python -c "import datasets; print('datasets OK')"
 ```
 
-Nếu thành công:
+## 6. Lưu ý quan trọng khi chạy lệnh
 
-```text
-datasets OK
+Project sử dụng package `src`, vì vậy nên chạy các script bằng dạng module:
+
+```powershell
+python -m src.package.module
 ```
 
----
+Không nên chạy trực tiếp kiểu:
 
-## 11. Load dataset từ Hugging Face
-
-Chạy:
-
-```bash
-python src/data/load_dataset.py
+```powershell
+python src/package/module.py
 ```
 
-Ví dụ code:
+Ví dụ đúng:
 
-```python
-from datasets import load_dataset
-
-
-ds = load_dataset("YuITC/Vietnamese-Legal-Documents")
-
-print(ds)
-print(ds["train"][0])
+```powershell
+python -m src.indexing.inverted_index
 ```
 
-Kết quả mong đợi:
+Ví dụ dễ gây lỗi `ModuleNotFoundError: No module named 'src'`:
 
-```text
-train
-test
+```powershell
+python src/indexing/inverted_index.py
 ```
 
-và dữ liệu mẫu của dataset.
+## 7. Chuẩn bị dữ liệu
 
----
+Chạy lệnh sau từ thư mục root của project:
 
-## 12. Chuẩn hóa dữ liệu
-
-Chạy script:
-
-```bash
-python src/data/prepare_data.py --max_queries 100 --max_docs 1000
+```powershell
+python -m src.data.prepare_data --max_queries 500 --max_docs 5000
 ```
 
-Kết quả:
+Kết quả sinh ra:
 
 ```text
 data/processed/corpus.json
@@ -271,154 +161,187 @@ data/processed/queries.json
 data/processed/qrels.json
 ```
 
-Ý nghĩa:
+Có thể chạy với dữ liệu nhỏ hơn để test nhanh:
 
-| File         | Vai trò                         |
-| ------------ | ------------------------------- |
-| corpus.json  | Toàn bộ văn bản pháp luật       |
-| queries.json | Danh sách câu hỏi               |
-| qrels.json   | Ground truth document liên quan |
+```powershell
+python -m src.data.prepare_data --max_queries 100 --max_docs 1000
+```
 
----
+## 8. Tiền xử lý văn bản
 
-## 13. Tiền xử lý văn bản
+Pipeline preprocessing gồm:
 
-Các bước preprocessing:
+1. Chuẩn hóa Unicode nếu có.
+2. Chuyển chữ thường.
+3. Loại bỏ ký tự đặc biệt không cần thiết.
+4. Chuẩn hóa khoảng trắng.
+5. Tách từ tiếng Việt bằng `underthesea`.
+6. Loại bỏ stopwords tiếng Việt.
 
-1. Lowercase.
-2. Loại bỏ ký tự đặc biệt.
-3. Chuẩn hóa khoảng trắng.
-4. Tách từ tiếng Việt.
-5. Loại bỏ stopwords.
-
-Ví dụ:
+Ví dụ input:
 
 ```text
 Người lao động được nghỉ hằng năm bao nhiêu ngày?
 ```
 
-Sau tokenize:
+Ví dụ token sau xử lý:
 
 ```text
-['người', 'lao_động', 'nghỉ', 'hằng_năm', 'bao_nhiêu', 'ngày']
+['người', 'lao_động', 'nghỉ', 'hằng_năm', 'ngày']
 ```
 
----
-
-## 14. Boolean Retrieval
-
-### Người phụ trách
-
-Người 1
-
-### Thành phần chính
+Các file chính:
 
 ```text
-src/indexing/inverted_index.py
-src/retrieval/boolean_retrieval.py
+src/preprocessing/text_cleaner.py
+src/preprocessing/tokenizer.py
+src/preprocessing/stopwords.py
 ```
+
+## 9. Phân công nhóm
+
+| Thành viên | Phụ trách | File chính |
+|---|---|---|
+| Người 1 | Boolean Retrieval + Inverted Index | `src/indexing/inverted_index.py`, `src/retrieval/boolean_retrieval.py` |
+| Người 2 | TF-IDF + Cosine Similarity | `src/retrieval/tfidf_retrieval.py` |
+| Người 3 | BM25 + Evaluation | `src/retrieval/bm25_retrieval.py`, `src/evaluation/metrics.py`, `src/evaluation/evaluate.py` |
+
+## 10. Boolean Retrieval
+
+### Trạng thái
+
+Phần Boolean Retrieval và Inverted Index đã có thể chạy end-to-end với dữ liệu mẫu từ dataset.
 
 ### Chức năng
 
-* Xây dựng inverted index.
-* Tạo dictionary và postings list.
-* Hỗ trợ AND.
-* Hỗ trợ OR.
-* Hỗ trợ NOT nếu kịp.
+- Xây dựng inverted index.
+- Tạo postings list dạng `term -> list[doc_id]`.
+- Lưu vocabulary, document frequency và document length.
+- Hỗ trợ truy vấn tự nhiên, mặc định dùng AND giữa các token.
+- Hỗ trợ toán tử `OR`.
+- Hỗ trợ toán tử `NOT`.
+- Trả về Top-K document phù hợp.
 
 ### Build inverted index
 
-```bash
-python src/indexing/inverted_index.py
+Sau khi đã chuẩn bị dữ liệu, chạy:
+
+```powershell
+python -m src.indexing.inverted_index
 ```
 
-Kết quả:
+Kết quả lưu tại:
 
 ```text
 outputs/indexes/inverted_index.json
 ```
 
-### Chạy Boolean Retrieval
+Ví dụ output:
 
-```bash
-python src/app/cli.py --method boolean --query "điều kiện kết hôn" --top_k 5
+```text
+Đã build inverted index.
+Số document: 558
+Kích thước vocabulary: 4632
+Lưu tại: outputs/indexes/inverted_index.json
+```
+
+### Chạy Boolean Retrieval trực tiếp
+
+```powershell
+python -m src.retrieval.boolean_retrieval --query "điều kiện kết hôn" --top_k 5
+```
+
+Ví dụ query có `OR`:
+
+```powershell
+python -m src.retrieval.boolean_retrieval --query "kết hôn OR lao động" --top_k 5
+```
+
+Ví dụ query có `NOT`:
+
+```powershell
+python -m src.retrieval.boolean_retrieval --query "kết hôn NOT ly hôn" --top_k 5
+```
+
+### Chạy qua CLI
+
+```powershell
+python -m src.app.cli --method boolean --query "điều kiện kết hôn" --top_k 5
+```
+
+Ví dụ output:
+
+```text
+Query: điều kiện kết hôn
+Method: boolean
+
+1. CID: 47569
+   Score: 2.0
+   Text: "Điều 8. Điều kiện kết hôn ..."
 ```
 
 ### Nhận xét
 
 Ưu điểm:
 
-* Dễ cài đặt.
-* Tìm kiếm nhanh với inverted index.
-* Minh họa rõ cơ chế search engine.
+- Dễ cài đặt.
+- Tốc độ nhanh sau khi đã có inverted index.
+- Minh họa rõ cơ chế tìm kiếm bằng postings list.
 
 Hạn chế:
 
-* Không ranking tốt.
-* Phụ thuộc từ khóa chính xác.
+- Phụ thuộc nhiều vào từ khóa chính xác.
+- Không hiểu ngữ nghĩa.
+- Khả năng ranking kém hơn TF-IDF và BM25.
 
----
-
-## 15. TF-IDF + Cosine Similarity
+## 11. TF-IDF + Cosine Similarity
 
 ### Người phụ trách
 
-Người 2
+Người 2.
 
-### Thành phần chính
+### Mục tiêu
 
-```text
-src/retrieval/tfidf_retrieval.py
-```
+- Xây dựng vocabulary.
+- Tính TF, IDF, TF-IDF.
+- Biểu diễn query và document thành vector.
+- Tính cosine similarity.
+- Trả về Top-K document có score cao nhất.
 
 ### Công thức
 
 ```text
-tfidf(t,d) = tf(t,d) * idf(t)
+tfidf(t, d) = tf(t, d) * idf(t)
 ```
 
 ```text
-cosine(q,d) = (q · d) / (||q|| * ||d||)
+cosine(q, d) = (q · d) / (||q|| * ||d||)
 ```
 
-### Chạy TF-IDF
+### Lệnh chạy dự kiến
 
-```bash
-python src/app/cli.py --method tfidf --query "điều kiện kết hôn" --top_k 5
+```powershell
+python -m src.app.cli --method tfidf --query "điều kiện kết hôn" --top_k 5
 ```
 
-### Nhận xét
-
-Ưu điểm:
-
-* Có ranking.
-* Dễ hiểu.
-* Phù hợp baseline.
-
-Hạn chế:
-
-* Nhạy với cách tokenize.
-* Chưa xử lý tốt độ dài văn bản.
-
----
-
-## 16. BM25 Retrieval
+## 12. BM25 Retrieval
 
 ### Người phụ trách
 
-Người 3
+Người 3.
 
-### Thành phần chính
+### Mục tiêu
 
-```text
-src/retrieval/bm25_retrieval.py
-```
+- Tính term frequency trong document.
+- Tính document length và average document length.
+- Cài đặt BM25 Okapi.
+- Trả về Top-K document theo điểm BM25.
 
 ### Công thức
 
 ```text
-score(q,d) = Σ IDF(t) * ((tf(t,d)*(k1+1)) /
-              (tf(t,d) + k1*(1-b+b*dl/avgdl)))
+score(q, d) = Σ IDF(t) * ((tf(t,d) * (k1 + 1)) /
+              (tf(t,d) + k1 * (1 - b + b * dl / avgdl)))
 ```
 
 Tham số mặc định:
@@ -428,40 +351,27 @@ k1 = 1.5
 b = 0.75
 ```
 
-### Chạy BM25
+### Lệnh chạy dự kiến
 
-```bash
-python src/app/cli.py --method bm25 --query "điều kiện kết hôn" --top_k 5
+```powershell
+python -m src.app.cli --method bm25 --query "điều kiện kết hôn" --top_k 5
 ```
 
-### Nhận xét
+## 13. Evaluation
 
-Ưu điểm:
+### Metrics
 
-* Ranking tốt hơn TF-IDF.
-* Phù hợp search engine thực tế.
+Các metric sử dụng:
 
-Hạn chế:
+- Precision@K
+- Recall@K
+- MAP
+- nDCG@K
 
-* Tính toán phức tạp hơn Boolean.
+### Lệnh chạy dự kiến
 
----
-
-## 17. Đánh giá hệ thống
-
-### Metrics sử dụng
-
-```text
-Precision@K
-Recall@K
-MAP
-nDCG@K
-```
-
-### Chạy evaluation
-
-```bash
-python src/evaluation/evaluate.py --method all --top_k 10 --max_queries 100
+```powershell
+python -m src.evaluation.evaluate --method all --top_k 10 --max_queries 100
 ```
 
 Kết quả lưu tại:
@@ -470,125 +380,149 @@ Kết quả lưu tại:
 outputs/reports/evaluation_report.csv
 ```
 
----
+## 14. Unit tests
 
-## 18. Ví dụ CLI
+Chạy toàn bộ test:
 
-### Boolean
-
-```bash
-python src/app/cli.py --method boolean --query "điều kiện kết hôn" --top_k 5
+```powershell
+python -m pytest
 ```
 
-### TF-IDF
+Chạy riêng test Boolean:
 
-```bash
-python src/app/cli.py --method tfidf --query "điều kiện kết hôn" --top_k 5
+```powershell
+python -m pytest tests/test_boolean.py -v
 ```
 
-### BM25
-
-```bash
-python src/app/cli.py --method bm25 --query "điều kiện kết hôn" --top_k 5
-```
-
----
-
-## 19. Unit Tests
-
-Chạy test:
-
-```bash
-pytest tests/
-```
-
-Các test gồm:
+Kết quả mong đợi hiện tại cho phần Boolean:
 
 ```text
-test_preprocessing.py
-test_boolean.py
-test_tfidf.py
-test_bm25.py
-test_metrics.py
+5 passed
 ```
 
----
+Các nhóm test nên có:
 
-## 20. Luồng chạy end-to-end
-
-### Bước 1
-
-```bash
-python src/data/prepare_data.py --max_queries 100 --max_docs 2000
+```text
+tests/test_preprocessing.py
+tests/test_boolean.py
+tests/test_tfidf.py
+tests/test_bm25.py
+tests/test_metrics.py
 ```
 
-### Bước 2
+## 15. Luồng chạy end-to-end hiện tại cho Boolean Retrieval
 
-```bash
+Chạy lần lượt:
+
+```powershell
+python -m src.data.prepare_data --max_queries 500 --max_docs 5000
+python -m src.indexing.inverted_index
+python -m src.retrieval.boolean_retrieval --query "điều kiện kết hôn" --top_k 5
+python -m pytest
+python -m src.app.cli --method boolean --query "điều kiện kết hôn" --top_k 5
+```
+
+Nếu chạy thành công, phần Người 1 đã hoàn thành pipeline Boolean Retrieval.
+
+## 16. Luồng chạy end-to-end sau khi hoàn thành cả 3 thuật toán
+
+```powershell
+python -m src.data.prepare_data --max_queries 500 --max_docs 5000
+python -m src.indexing.inverted_index
+python -m src.app.cli --method boolean --query "điều kiện kết hôn" --top_k 5
+python -m src.app.cli --method tfidf --query "điều kiện kết hôn" --top_k 5
+python -m src.app.cli --method bm25 --query "điều kiện kết hôn" --top_k 5
+python -m src.evaluation.evaluate --method all --top_k 10 --max_queries 100
+```
+
+## 17. Troubleshooting
+
+### Lỗi `ModuleNotFoundError: No module named 'src'`
+
+Nguyên nhân thường gặp là chạy script trực tiếp bằng đường dẫn file.
+
+Không nên chạy:
+
+```powershell
 python src/indexing/inverted_index.py
 ```
 
-### Bước 3
+Hãy chạy:
 
-```bash
-python src/app/cli.py --method boolean --query "điều kiện kết hôn" --top_k 5
+```powershell
+python -m src.indexing.inverted_index
 ```
 
-### Bước 4
+### Lỗi chưa có `corpus.json`
 
-```bash
-python src/app/cli.py --method tfidf --query "điều kiện kết hôn" --top_k 5
+Hãy chạy prepare data trước:
+
+```powershell
+python -m src.data.prepare_data --max_queries 500 --max_docs 5000
 ```
 
-### Bước 5
+### Lỗi chưa có `inverted_index.json`
 
-```bash
-python src/app/cli.py --method bm25 --query "điều kiện kết hôn" --top_k 5
+Hãy build index trước:
+
+```powershell
+python -m src.indexing.inverted_index
 ```
 
-### Bước 6
+### Query Boolean không ra kết quả
 
-```bash
-python src/evaluation/evaluate.py --method all --top_k 10 --max_queries 100
+Một số nguyên nhân có thể là:
+
+- Token trong query không khớp với token sau preprocessing.
+- Query quá cụ thể hoặc dùng từ không xuất hiện trong corpus nhỏ.
+- Dữ liệu đang chạy chỉ là subset do dùng `--max_queries`, `--max_docs`.
+
+Có thể thử query đơn giản hơn:
+
+```powershell
+python -m src.app.cli --method boolean --query "kết hôn" --top_k 5
 ```
 
----
+hoặc:
 
-## 21. Hướng phát triển
+```powershell
+python -m src.app.cli --method boolean --query "lao động" --top_k 5
+```
+
+## 18. Hướng phát triển
 
 Có thể mở rộng project theo các hướng:
 
-1. Query expansion.
-2. Sửa lỗi chính tả tiếng Việt.
-3. Phrase search.
-4. Dense Retrieval.
-5. Streamlit UI.
-6. RAG chatbot pháp luật.
+1. Hoàn thiện TF-IDF retrieval.
+2. Hoàn thiện BM25 retrieval.
+3. Tối ưu scoring bằng candidate documents từ inverted index.
+4. Bổ sung phrase search.
+5. Bổ sung query expansion.
+6. Bổ sung sửa lỗi chính tả tiếng Việt.
+7. Xây dựng giao diện Streamlit.
+8. Dùng kết quả truy xuất làm ngữ cảnh cho chatbot RAG pháp luật.
 
----
+## 19. Kết luận
 
-## 22. Kết luận
+Project giúp hiểu rõ các thành phần chính của hệ thống Information Retrieval:
 
-Project giúp hiểu rõ các thành phần chính của Information Retrieval:
-
-* Tiền xử lý văn bản.
-* Inverted Index.
-* Boolean Retrieval.
-* TF-IDF.
-* BM25.
-* Evaluation.
+- Tiền xử lý văn bản.
+- Inverted Index.
+- Boolean Retrieval.
+- TF-IDF.
+- BM25.
+- Evaluation.
 
 Trong ba thuật toán:
 
-* Boolean Retrieval phù hợp minh họa inverted index.
-* TF-IDF là baseline dễ hiểu.
-* BM25 thường cho kết quả tốt nhất.
+- Boolean Retrieval phù hợp để minh họa cơ chế inverted index và truy vấn logic.
+- TF-IDF là baseline có ranking, dễ hiểu và dễ giải thích.
+- BM25 thường hiệu quả hơn TF-IDF trong tìm kiếm văn bản thực tế.
 
----
+## 20. Tài liệu tham khảo
 
-## 23. Tài liệu tham khảo
-
-1. Introduction to Information Retrieval - Manning, Raghavan, Schütze.
-2. Hugging Face Datasets Documentation.
-3. Vietnamese Legal Documents Dataset.
-4. BM25 Okapi Retrieval.
+1. Christopher D. Manning, Prabhakar Raghavan, Hinrich Schütze, *Introduction to Information Retrieval*, Cambridge University Press, 2009.
+2. Hugging Face Datasets Documentation: <https://huggingface.co/docs/datasets>
+3. Vietnamese Legal Documents Dataset: <https://huggingface.co/datasets/YuITC/Vietnamese-Legal-Documents>
+4. BKAI Legal Retrieval Raw Dataset: <https://huggingface.co/datasets/tmnam20/BKAI-Legal-Retrieval>
+5. BM25 Okapi Retrieval.
