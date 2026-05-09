@@ -1,0 +1,25 @@
+dataset:
+  name: "YuITC/Vietnamese-Legal-Documents"
+  main_url: "https://huggingface.co/datasets/YuITC/Vietnamese-Legal-Documents"
+  raw_name: "tmnam20/BKAI-Legal-Retrieval"
+  raw_url: "https://huggingface.co/datasets/tmnam20/BKAI-Legal-Retrieval"
+
+paths:
+  corpus: "data/processed/corpus.json"
+  queries: "data/processed/queries.json"
+  qrels: "data/processed/qrels.json"
+
+preprocessing:
+  lowercase: true
+  remove_punctuation: true
+  use_underthesea: true
+  remove_stopwords: true
+
+retrieval:
+  top_k: 10
+  bm25:
+    k1: 1.5
+    b: 0.75
+
+evaluation:
+  k_values: [5, 10]
