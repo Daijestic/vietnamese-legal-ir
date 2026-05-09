@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 from collections import Counter
+import re
 
 from src.indexing.inverted_index import InvertedIndex
 from src.preprocessing.tokenizer import preprocess
@@ -66,11 +67,13 @@ class BooleanRetriever:
         """
         Hỗ trợ:
         - Query tự nhiên: mặc định AND các token.
-          Ví dụ: "điều kiện kết hôn"
+        Ví dụ: "điều kiện kết hôn"
         - OR:
-          Ví dụ: "kết hôn OR ly hôn"
+        Ví dụ: "kết hôn OR ly hôn"
+        Ví dụ: "kết hôn or ly hôn"
         - NOT:
-          Ví dụ: "kết hôn NOT ly hôn"
+        Ví dụ: "kết hôn NOT ly hôn"
+        Ví dụ: "kết hôn not ly hôn"
         """
 
         raw_query = query.strip()
@@ -78,26 +81,52 @@ class BooleanRetriever:
         if not raw_query:
             return []
 
-        upper_query = raw_query.upper()
+        # Case 1: NOT - không phân biệt hoa thường
+        if re.search(r"\bNOT\b", raw_query, flags=re.IGNORECASE):
+            left, right = re.split(
+                r"\bNOT\b",
+                raw_query,
+                maxsplit=1,
+                flags=re.IGNORECASE,
+            )
 
-        if " NOT " in upper_query:
-            left, right = raw_query.split("NOT", maxsplit=1)
             positive_tokens = preprocess(left)
             negative_tokens = preprocess(right)
+
+            if not positive_tokens:
+                return []
+
             matched_docs = self._not_search(positive_tokens, negative_tokens)
+
+            # Chỉ dùng positive_tokens để tính điểm,
+            # vì negative_tokens là điều kiện loại trừ.
             query_tokens = positive_tokens
 
-        elif " OR " in upper_query:
-            parts = raw_query.split("OR")
+        # Case 2: OR - không phân biệt hoa thường
+        elif re.search(r"\bOR\b", raw_query, flags=re.IGNORECASE):
+            parts = re.split(
+                r"\bOR\b",
+                raw_query,
+                flags=re.IGNORECASE,
+            )
+
             query_tokens = []
 
             for part in parts:
                 query_tokens.extend(preprocess(part))
 
+            if not query_tokens:
+                return []
+
             matched_docs = self._or_search(query_tokens)
 
+        # Case 3: Query tự nhiên, mặc định AND
         else:
             query_tokens = preprocess(raw_query)
+
+            if not query_tokens:
+                return []
+
             matched_docs = self._and_search(query_tokens)
 
         ranked_results = self._score_docs(matched_docs, query_tokens)
