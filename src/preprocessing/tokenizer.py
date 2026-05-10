@@ -1,24 +1,28 @@
 from functools import lru_cache
 
-from src.preprocessing.text_cleaner import clean_text
 from src.preprocessing.stopwords import remove_stopwords
+from src.preprocessing.text_cleaner import clean_text
+from src.utils.console import configure_utf8_stdout
 
 
 def tokenize(text: str, use_underthesea: bool = True) -> list[str]:
-    text = clean_text(text)
+    cleaned_text = clean_text(text)
 
-    if not text:
+    if not cleaned_text:
         return []
 
     if use_underthesea:
         try:
             from underthesea import word_tokenize
-            tokenized_text = word_tokenize(text, format="text")
-            return tokenized_text.split()
+
+            tokenized_text = word_tokenize(cleaned_text, format="text")
+            tokens = tokenized_text.split()
+            if tokens:
+                return tokens
         except Exception:
             pass
 
-    return text.split()
+    return cleaned_text.split()
 
 
 @lru_cache(maxsize=50000)
@@ -41,3 +45,11 @@ def preprocess(
     remove_stopword: bool = True,
 ) -> list[str]:
     return list(preprocess_cached(text, use_underthesea, remove_stopword))
+
+
+if __name__ == "__main__":
+    configure_utf8_stdout()
+    sample_text = "Người lao động được nghỉ hằng năm bao nhiêu ngày?"
+    print("Original:", sample_text)
+    print("Tokens:", tokenize(sample_text))
+    print("Preprocessed:", preprocess(sample_text))

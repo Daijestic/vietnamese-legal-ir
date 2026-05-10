@@ -1,4 +1,8 @@
 datasets
-tqdm
+pandas
+numpy
+scikit-learn
 underthesea
+pyyaml
+tqdm
 pytest

@@ -1,25 +1,30 @@
+# Cau hinh dataset chinh va raw data tham chieu
 dataset:
   name: "YuITC/Vietnamese-Legal-Documents"
   main_url: "https://huggingface.co/datasets/YuITC/Vietnamese-Legal-Documents"
   raw_name: "tmnam20/BKAI-Legal-Retrieval"
   raw_url: "https://huggingface.co/datasets/tmnam20/BKAI-Legal-Retrieval"
 
+# Duong dan du lieu sau khi chuan hoa
 paths:
   corpus: "data/processed/corpus.json"
   queries: "data/processed/queries.json"
   qrels: "data/processed/qrels.json"
 
+# Tuy chon preprocessing tieng Viet
 preprocessing:
   lowercase: true
   remove_punctuation: true
   use_underthesea: true
   remove_stopwords: true
 
+# Cau hinh truy xuat
 retrieval:
   top_k: 10
   bm25:
     k1: 1.5
     b: 0.75
 
+# Metric danh gia
 evaluation:
   k_values: [5, 10]

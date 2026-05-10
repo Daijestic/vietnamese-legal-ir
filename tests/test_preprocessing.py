@@ -1,10 +1,9 @@
 from src.preprocessing.text_cleaner import clean_text
-from src.preprocessing.tokenizer import tokenize, preprocess
+from src.preprocessing.tokenizer import preprocess, tokenize
 
 
 def test_clean_text_lowercase_and_remove_punctuation():
-    text = "Xin Chào!!!"
-    assert clean_text(text) == "xin chào"
+    assert clean_text("Xin Chào!!!") == "xin chào"
 
 
 def test_tokenize_not_empty():

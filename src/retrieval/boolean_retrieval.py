@@ -5,6 +5,7 @@ import re
 
 from src.indexing.inverted_index import InvertedIndex
 from src.preprocessing.tokenizer import preprocess
+from src.utils.console import configure_utf8_stdout
 
 
 class BooleanRetriever:
@@ -123,6 +124,8 @@ class BooleanRetriever:
 
 
 def main():
+    configure_utf8_stdout()
+
     parser = argparse.ArgumentParser(description="Boolean Retrieval CLI test")
     parser.add_argument(
         "--index_path",
