@@ -6,3 +6,4 @@ underthesea
 pyyaml
 tqdm
 pytest
+streamlit

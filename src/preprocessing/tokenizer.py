@@ -25,7 +25,9 @@ def tokenize(text: str, use_underthesea: bool = True) -> list[str]:
     return cleaned_text.split()
 
 
-@lru_cache(maxsize=50000)
+# Full-data builds reuse the same corpus across index, TF-IDF, and BM25.
+# A larger cache avoids repeating tokenization work across those passes.
+@lru_cache(maxsize=200000)
 def preprocess_cached(
     text: str,
     use_underthesea: bool = True,

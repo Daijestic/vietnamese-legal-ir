@@ -1,5 +1,6 @@
 import argparse
 import json
+import pickle
 from collections import defaultdict
 from pathlib import Path
 
@@ -74,20 +75,33 @@ class InvertedIndex:
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         data = {
-            "postings": self.postings,
+            "postings": dict(self.postings),
             "doc_lengths": self.doc_lengths,
             "document_frequency": self.document_frequency,
             "vocabulary": sorted(self.vocabulary),
             "num_docs": self.num_docs,
         }
 
+        if output_path.suffix.lower() == ".pkl":
+            with output_path.open("wb") as file:
+                pickle.dump(data, file, protocol=pickle.HIGHEST_PROTOCOL)
+            return
+
         with output_path.open("w", encoding="utf-8") as file:
             json.dump(data, file, ensure_ascii=False, indent=2)
 
+    def save_pickle(self, path: str | Path) -> None:
+        self.save(path)
+
     @classmethod
     def load(cls, path: str | Path) -> "InvertedIndex":
-        with Path(path).open("r", encoding="utf-8") as file:
-            data = json.load(file)
+        input_path = Path(path)
+        if input_path.suffix.lower() == ".pkl":
+            with input_path.open("rb") as file:
+                data = pickle.load(file)
+        else:
+            with input_path.open("r", encoding="utf-8") as file:
+                data = json.load(file)
 
         index = cls()
         index.postings = data.get("postings", {})
@@ -96,6 +110,10 @@ class InvertedIndex:
         index.vocabulary = set(data.get("vocabulary", []))
         index.num_docs = data.get("num_docs", len(index.doc_lengths))
         return index
+
+    @classmethod
+    def load_pickle(cls, path: str | Path) -> "InvertedIndex":
+        return cls.load(path)
 
 
 def load_corpus(path: str | Path) -> dict[str, str]:
@@ -121,6 +139,11 @@ def main():
         default="outputs/indexes/inverted_index.json",
         help="Duong dan luu inverted index",
     )
+    parser.add_argument(
+        "--pickle_path",
+        default="outputs/indexes/inverted_index.pkl",
+        help="Duong dan luu inverted index pickle",
+    )
     args = parser.parse_args()
 
     corpus = load_corpus(args.corpus_path)
@@ -128,11 +151,13 @@ def main():
     index = InvertedIndex()
     index.build(corpus)
     index.save(args.output_path)
+    index.save_pickle(args.pickle_path)
 
     print("Da build inverted index.")
     print(f"So document: {index.num_docs}")
     print(f"Kich thuoc vocabulary: {len(index.vocabulary)}")
     print(f"Luu tai: {args.output_path}")
+    print(f"Luu tai: {args.pickle_path}")
 
 
 if __name__ == "__main__":

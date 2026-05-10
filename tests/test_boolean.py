@@ -57,3 +57,13 @@ def test_boolean_search_or_lowercase():
     doc_ids = [item["doc_id"] for item in results]
     assert "1" in doc_ids
     assert "2" in doc_ids
+
+
+def test_inverted_index_save_pickle_and_load(tmp_path):
+    index = build_sample_index()
+    pickle_path = tmp_path / "inverted_index.pkl"
+    index.save_pickle(pickle_path)
+
+    loaded = InvertedIndex.load_pickle(pickle_path)
+
+    assert "1" in loaded.get_postings("kết hôn")

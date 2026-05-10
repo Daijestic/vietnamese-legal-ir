@@ -1,6 +1,8 @@
 import argparse
+import heapq
 import json
 import math
+import pickle
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -15,6 +17,7 @@ class BM25Retriever:
         self.k1 = k1
         self.b = b
         self.num_docs = 0
+        self.doc_ids = []
         self.avgdl = 0.0
         self.document_frequency = {}
         self.doc_lengths = {}
@@ -24,6 +27,7 @@ class BM25Retriever:
 
     def fit(self, corpus: dict[str, str]) -> None:
         self.num_docs = len(corpus)
+        self.doc_ids = [str(doc_id) for doc_id in corpus.keys()]
         self.doc_lengths = {}
         self.doc_term_freqs = {}
         self.postings = defaultdict(dict)
@@ -58,6 +62,8 @@ class BM25Retriever:
         unique_query_terms = [term for term in dict.fromkeys(query_terms) if term in self.postings]
         for term in unique_query_terms:
             candidate_docs.update(self.postings[term].keys())
+        if not candidate_docs:
+            return []
 
         scored_results = []
         for doc_id in candidate_docs:
@@ -86,8 +92,62 @@ class BM25Retriever:
                     }
                 )
 
-        scored_results.sort(key=lambda item: (-item["score"], item["doc_id"]))
-        return scored_results[:top_k]
+        if not scored_results:
+            return []
+
+        top_results = heapq.nlargest(
+            min(top_k, len(scored_results)),
+            scored_results,
+            key=lambda item: item["score"],
+        )
+        top_results.sort(key=lambda item: (-item["score"], item["doc_id"]))
+        return top_results
+
+    def save(self, path: str | Path) -> None:
+        output_path = Path(path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        data = {
+            "k1": self.k1,
+            "b": self.b,
+            "num_docs": self.num_docs,
+            "doc_ids": self.doc_ids,
+            "avgdl": self.avgdl,
+            "document_frequency": self.document_frequency,
+            "doc_lengths": self.doc_lengths,
+            "doc_term_freqs": self.doc_term_freqs,
+            "postings": {term: doc_map for term, doc_map in self.postings.items()},
+            "idf": self.idf,
+        }
+
+        if output_path.suffix.lower() == ".json":
+            with output_path.open("w", encoding="utf-8") as file:
+                json.dump(data, file, ensure_ascii=False, indent=2)
+            return
+
+        with output_path.open("wb") as file:
+            pickle.dump(data, file, protocol=pickle.HIGHEST_PROTOCOL)
+
+    @classmethod
+    def load(cls, path: str | Path) -> "BM25Retriever":
+        input_path = Path(path)
+        if input_path.suffix.lower() == ".json":
+            with input_path.open("r", encoding="utf-8") as file:
+                data = json.load(file)
+        else:
+            with input_path.open("rb") as file:
+                data = pickle.load(file)
+
+        retriever = cls(k1=data.get("k1", 1.5), b=data.get("b", 0.75))
+        retriever.num_docs = data.get("num_docs", 0)
+        retriever.doc_ids = data.get("doc_ids", [])
+        retriever.avgdl = data.get("avgdl", 0.0)
+        retriever.document_frequency = data.get("document_frequency", {})
+        retriever.doc_lengths = data.get("doc_lengths", {})
+        retriever.doc_term_freqs = data.get("doc_term_freqs", {})
+        retriever.postings = defaultdict(dict, data.get("postings", {}))
+        retriever.idf = data.get("idf", {})
+        return retriever
 
 
 def load_corpus(path: str | Path) -> dict[str, str]:

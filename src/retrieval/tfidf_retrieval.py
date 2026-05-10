@@ -1,6 +1,8 @@
 import argparse
+import heapq
 import json
 import math
+import pickle
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -13,6 +15,7 @@ from src.utils.console import configure_utf8_stdout
 class TfidfRetriever:
     def __init__(self):
         self.num_docs = 0
+        self.doc_ids = []
         self.vocabulary = set()
         self.document_frequency = {}
         self.idf = {}
@@ -22,6 +25,7 @@ class TfidfRetriever:
 
     def fit(self, corpus: dict[str, str]) -> None:
         self.num_docs = len(corpus)
+        self.doc_ids = [str(doc_id) for doc_id in corpus.keys()]
         doc_term_freqs = {}
         document_frequency = Counter()
         postings = defaultdict(dict)
@@ -92,6 +96,8 @@ class TfidfRetriever:
         candidate_docs = set()
         for term in query_vector:
             candidate_docs.update(self.postings.get(term, {}).keys())
+        if not candidate_docs:
+            return []
 
         scored_results = []
         for doc_id in candidate_docs:
@@ -115,8 +121,16 @@ class TfidfRetriever:
                     }
                 )
 
-        scored_results.sort(key=lambda item: (-item["score"], item["doc_id"]))
-        return scored_results[:top_k]
+        if not scored_results:
+            return []
+
+        top_results = heapq.nlargest(
+            min(top_k, len(scored_results)),
+            scored_results,
+            key=lambda item: item["score"],
+        )
+        top_results.sort(key=lambda item: (-item["score"], item["doc_id"]))
+        return top_results
 
     def save(self, path: str | Path) -> None:
         output_path = Path(path)
@@ -124,6 +138,7 @@ class TfidfRetriever:
 
         data = {
             "num_docs": self.num_docs,
+            "doc_ids": self.doc_ids,
             "vocabulary": sorted(self.vocabulary),
             "document_frequency": self.document_frequency,
             "idf": self.idf,
@@ -135,16 +150,27 @@ class TfidfRetriever:
             },
         }
 
-        with output_path.open("w", encoding="utf-8") as file:
-            json.dump(data, file, ensure_ascii=False, indent=2)
+        if output_path.suffix.lower() == ".json":
+            with output_path.open("w", encoding="utf-8") as file:
+                json.dump(data, file, ensure_ascii=False, indent=2)
+            return
+
+        with output_path.open("wb") as file:
+            pickle.dump(data, file, protocol=pickle.HIGHEST_PROTOCOL)
 
     @classmethod
     def load(cls, path: str | Path) -> "TfidfRetriever":
-        with Path(path).open("r", encoding="utf-8") as file:
-            data = json.load(file)
+        input_path = Path(path)
+        if input_path.suffix.lower() == ".json":
+            with input_path.open("r", encoding="utf-8") as file:
+                data = json.load(file)
+        else:
+            with input_path.open("rb") as file:
+                data = pickle.load(file)
 
         retriever = cls()
         retriever.num_docs = data.get("num_docs", 0)
+        retriever.doc_ids = data.get("doc_ids", [])
         retriever.vocabulary = set(data.get("vocabulary", []))
         retriever.document_frequency = data.get("document_frequency", {})
         retriever.idf = data.get("idf", {})

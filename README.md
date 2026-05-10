@@ -526,3 +526,61 @@ Trong ba thuật toán:
 3. Vietnamese Legal Documents Dataset: <https://huggingface.co/datasets/YuITC/Vietnamese-Legal-Documents>
 4. BKAI Legal Retrieval Raw Dataset: <https://huggingface.co/datasets/tmnam20/BKAI-Legal-Retrieval>
 5. BM25 Okapi Retrieval.
+
+## 21. Demo giao diện Streamlit
+
+Mục đích demo:
+
+- nhập query pháp luật tiếng Việt
+- chạy đồng thời Boolean Retrieval, TF-IDF và BM25
+- so sánh ranking, score và thời gian chạy trên cùng một màn hình
+- hiển thị metric evaluation nếu đã có file báo cáo
+
+Chuẩn bị full data:
+
+```powershell
+python -m src.data.prepare_data
+python -m src.indexing.inverted_index
+```
+
+Chạy giao diện demo:
+
+```powershell
+streamlit run src/app/demo_streamlit.py
+```
+
+Giao diện demo gồm:
+
+- sidebar kiểm tra trạng thái `corpus.json`, `queries.json`, `qrels.json`, `inverted_index.json`
+- ô nhập query và các query mẫu để thao tác nhanh khi bảo vệ
+- bảng tổng quan so sánh 3 phương pháp theo số kết quả, thời gian tìm kiếm và best score
+- 3 tab kết quả riêng cho Boolean Retrieval, TF-IDF và BM25
+- bảng đối chiếu tài liệu theo rank và phần giao nhau giữa các phương pháp
+- khu vực hiển thị `evaluation_report.csv` và `summary.md` nếu đã chạy đánh giá
+
+## 22. Tối ưu full data và chạy demo nhanh
+
+Quy trình lần đầu:
+
+```powershell
+python -m src.data.prepare_data
+python -m src.indexing.build_retrieval_models
+streamlit run src/app/demo_streamlit.py
+```
+
+Quy trình các lần sau:
+
+```powershell
+streamlit run src/app/demo_streamlit.py
+```
+
+Giải thích:
+
+- `build_retrieval_models.py` sẽ kiểm tra `corpus.json`, `queries.json`, `qrels.json`, `inverted_index.pkl`, `tfidf_model.pkl`, `bm25_model.pkl`.
+- Nếu artifact đã tồn tại thì script sẽ `SKIP` và không build lại.
+- Streamlit chỉ load artifact đã lưu, không fit lại TF-IDF hoặc BM25 khi mở app.
+- Muốn build lại từ đầu thì chạy:
+
+```powershell
+python -m src.indexing.build_retrieval_models --force
+```
