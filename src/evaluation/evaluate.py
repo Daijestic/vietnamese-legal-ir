@@ -1,9 +1,14 @@
 import argparse
 import csv
 import json
+import sys
 from pathlib import Path
 
 from tqdm import tqdm
+
+ROOT_DIR = Path(__file__).resolve().parents[2]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 from src.evaluation.metrics import evaluate_query
 from src.indexing.inverted_index import InvertedIndex
@@ -13,6 +18,7 @@ from src.retrieval.tfidf_retrieval import TfidfRetriever
 
 
 DEFAULT_K_VALUES = [5, 10]
+DEFAULT_MAX_QUERIES = 100
 REPORT_PATH = Path("outputs/reports/evaluation_report.csv")
 
 
@@ -38,6 +44,12 @@ def build_retriever(method: str, corpus: dict[str, str]):
         return retriever
 
     raise ValueError(f"Unsupported method: {method}")
+
+
+def normalize_max_queries(max_queries: int | None) -> int | None:
+    if max_queries is None or max_queries <= 0:
+        return None
+    return max_queries
 
 
 def average_metrics(metric_rows: list[dict[str, float]]) -> dict[str, float]:
@@ -131,7 +143,7 @@ def main():
     parser = argparse.ArgumentParser(description="Evaluate retrieval methods")
     parser.add_argument("--method", choices=["boolean", "tfidf", "bm25", "all"], default="all")
     parser.add_argument("--top_k", type=int, default=10)
-    parser.add_argument("--max_queries", type=int, default=None)
+    parser.add_argument("--max_queries", type=int, default=DEFAULT_MAX_QUERIES)
     parser.add_argument("--corpus_path", default="data/processed/corpus.json")
     parser.add_argument("--queries_path", default="data/processed/queries.json")
     parser.add_argument("--qrels_path", default="data/processed/qrels.json")
@@ -140,6 +152,12 @@ def main():
     corpus = load_json(args.corpus_path)
     queries = load_json(args.queries_path)
     qrels = load_json(args.qrels_path)
+    max_queries = normalize_max_queries(args.max_queries)
+
+    if max_queries is None:
+        print("Dang evaluation tren toan bo query.")
+    else:
+        print(f"Dang evaluation tren {max_queries} query dau tien. Dung --max_queries 0 de chay full.")
 
     methods = ["boolean", "tfidf", "bm25"] if args.method == "all" else [args.method]
     report_rows = []
@@ -152,7 +170,7 @@ def main():
                 queries=queries,
                 qrels=qrels,
                 top_k=args.top_k,
-                max_queries=args.max_queries,
+                max_queries=max_queries,
             )
         )
 

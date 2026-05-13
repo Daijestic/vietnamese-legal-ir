@@ -28,7 +28,7 @@ class TfidfRetriever:
         self.doc_ids = [str(doc_id) for doc_id in corpus.keys()]
         doc_term_freqs = {}
         document_frequency = Counter()
-        postings = defaultdict(dict)
+        self.postings = defaultdict(dict)
 
         for doc_id, text in tqdm(corpus.items(), desc="Fitting TF-IDF"):
             doc_id = str(doc_id)
@@ -45,8 +45,6 @@ class TfidfRetriever:
             }
             doc_term_freqs[doc_id] = tf
 
-            for term, value in tf.items():
-                postings[term][doc_id] = value
             document_frequency.update(term_counts.keys())
 
         self.document_frequency = dict(document_frequency)
@@ -58,7 +56,6 @@ class TfidfRetriever:
 
         self.doc_vectors = {}
         self.doc_norms = {}
-        self.postings = postings
 
         for doc_id, tf_weights in doc_term_freqs.items():
             vector = {
@@ -68,6 +65,8 @@ class TfidfRetriever:
             norm = math.sqrt(sum(weight * weight for weight in vector.values()))
             self.doc_vectors[doc_id] = vector
             self.doc_norms[doc_id] = norm
+            for term, weight in vector.items():
+                self.postings[term][doc_id] = weight
 
     def _vectorize_query(self, query: str) -> dict[str, float]:
         tokens = preprocess(query)
@@ -93,25 +92,21 @@ class TfidfRetriever:
         if query_norm == 0:
             return []
 
-        candidate_docs = set()
-        for term in query_vector:
-            candidate_docs.update(self.postings.get(term, {}).keys())
-        if not candidate_docs:
+        dot_products = defaultdict(float)
+        for term, query_weight in query_vector.items():
+            for doc_id, doc_weight in self.postings.get(term, {}).items():
+                dot_products[doc_id] += query_weight * doc_weight
+
+        if not dot_products:
             return []
 
         scored_results = []
-        for doc_id in candidate_docs:
-            doc_vector = self.doc_vectors.get(doc_id, {})
+        for doc_id, dot_product in dot_products.items():
             doc_norm = self.doc_norms.get(doc_id, 0.0)
             if doc_norm == 0:
                 continue
 
-            dot_product = sum(
-                query_weight * doc_vector.get(term, 0.0)
-                for term, query_weight in query_vector.items()
-            )
             score = dot_product / (query_norm * doc_norm)
-
             if score > 0:
                 scored_results.append(
                     {

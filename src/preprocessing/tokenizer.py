@@ -6,21 +6,12 @@ from src.utils.console import configure_utf8_stdout
 
 
 def tokenize(text: str, use_underthesea: bool = True) -> list[str]:
+    # Keep the flag for backward compatibility, but tokenize with pure Python only.
+    _ = use_underthesea
     cleaned_text = clean_text(text)
 
     if not cleaned_text:
         return []
-
-    if use_underthesea:
-        try:
-            from underthesea import word_tokenize
-
-            tokenized_text = word_tokenize(cleaned_text, format="text")
-            tokens = tokenized_text.split()
-            if tokens:
-                return tokens
-        except Exception:
-            pass
 
     return cleaned_text.split()
 

@@ -18,6 +18,7 @@ def test_preprocess_not_empty():
     assert len(tokens) > 0
 
 
-def test_preprocess_remove_compound_stopword():
+def test_preprocess_remove_whitespace_stopwords():
     tokens = preprocess("Người lao động được nghỉ hằng năm bao nhiêu ngày?")
-    assert "bao_nhiêu" not in tokens
+    assert "bao" not in tokens
+    assert "nhiêu" not in tokens

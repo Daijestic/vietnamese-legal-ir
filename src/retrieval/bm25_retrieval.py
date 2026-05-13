@@ -58,31 +58,28 @@ class BM25Retriever:
         if not query_terms:
             return []
 
-        candidate_docs = set()
         unique_query_terms = [term for term in dict.fromkeys(query_terms) if term in self.postings]
-        for term in unique_query_terms:
-            candidate_docs.update(self.postings[term].keys())
-        if not candidate_docs:
+        if not unique_query_terms:
             return []
 
-        scored_results = []
-        for doc_id in candidate_docs:
-            dl = self.doc_lengths.get(doc_id, 0)
-            if dl == 0 or self.avgdl == 0:
-                continue
-
-            score = 0.0
-            term_freqs = self.doc_term_freqs.get(doc_id, {})
-
-            for term in unique_query_terms:
-                tf = term_freqs.get(term, 0)
-                if tf == 0:
+        scores = defaultdict(float)
+        for term in unique_query_terms:
+            postings = self.postings.get(term, {})
+            term_idf = self.idf.get(term, 0.0)
+            for doc_id, tf in postings.items():
+                dl = self.doc_lengths.get(doc_id, 0)
+                if dl == 0 or self.avgdl == 0:
                     continue
 
                 numerator = tf * (self.k1 + 1)
                 denominator = tf + self.k1 * (1 - self.b + self.b * dl / self.avgdl)
-                score += self.idf.get(term, 0.0) * (numerator / denominator)
+                scores[doc_id] += term_idf * (numerator / denominator)
 
+        if not scores:
+            return []
+
+        scored_results = []
+        for doc_id, score in scores.items():
             if score > 0:
                 scored_results.append(
                     {
