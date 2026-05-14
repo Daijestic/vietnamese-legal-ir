@@ -15,11 +15,15 @@ from src.indexing.inverted_index import InvertedIndex
 from src.retrieval.bm25_retrieval import BM25Retriever
 from src.retrieval.boolean_retrieval import BooleanRetriever
 from src.retrieval.tfidf_retrieval import TfidfRetriever
+from src.utils.console import configure_utf8_stdout
 
 
 DEFAULT_K_VALUES = [5, 10]
 DEFAULT_MAX_QUERIES = 100
 REPORT_PATH = Path("outputs/reports/evaluation_report.csv")
+INDEX_PATH = Path("outputs/indexes/inverted_index.pkl")
+TFIDF_MODEL_PATH = Path("outputs/indexes/tfidf_model.pkl")
+BM25_MODEL_PATH = Path("outputs/indexes/bm25_model.pkl")
 
 
 def load_json(path: str | Path):
@@ -27,18 +31,43 @@ def load_json(path: str | Path):
         return json.load(file)
 
 
+def parse_top_k(value: str) -> int | None:
+    normalized = value.strip().lower()
+    if normalized == "none":
+        return None
+
+    top_k = int(normalized)
+    if top_k < 0:
+        raise ValueError("--top_k phai la so nguyen khong am hoac 'none'.")
+    return top_k
+
+
 def build_retriever(method: str, corpus: dict[str, str]):
+    expected_num_docs = len(corpus)
+
     if method == "boolean":
+        if INDEX_PATH.exists():
+            index = InvertedIndex.load_pickle(INDEX_PATH)
+            if index.num_docs == expected_num_docs:
+                return BooleanRetriever(index)
         index = InvertedIndex()
         index.build(corpus)
         return BooleanRetriever(index)
 
     if method == "tfidf":
+        if TFIDF_MODEL_PATH.exists():
+            retriever = TfidfRetriever.load(TFIDF_MODEL_PATH)
+            if retriever.num_docs == expected_num_docs:
+                return retriever
         retriever = TfidfRetriever()
         retriever.fit(corpus)
         return retriever
 
     if method == "bm25":
+        if BM25_MODEL_PATH.exists():
+            retriever = BM25Retriever.load(BM25_MODEL_PATH)
+            if retriever.num_docs == expected_num_docs:
+                return retriever
         retriever = BM25Retriever()
         retriever.fit(corpus)
         return retriever
@@ -68,7 +97,8 @@ def evaluate_method(
     corpus: dict[str, str],
     queries: dict[str, str],
     qrels: dict[str, list[str]],
-    top_k: int,
+    top_k: int | None,
+    threshold: float,
     max_queries: int | None = None,
 ) -> dict[str, float]:
     retriever = build_retriever(method, corpus)
@@ -78,9 +108,9 @@ def evaluate_method(
 
     per_query_metrics = []
     for qid, query_text in tqdm(query_items, desc=f"Evaluating {method}"):
-        results = retriever.search(query_text, top_k=top_k)
-        retrieved_doc_ids = [item["doc_id"] for item in results]
-        relevant_doc_ids = set(qrels.get(qid, []))
+        results = retriever.search(query_text, top_k=top_k, threshold=threshold)
+        retrieved_doc_ids = [str(item["doc_id"]) for item in results]
+        relevant_doc_ids = {str(doc_id) for doc_id in qrels.get(qid, [])}
         per_query_metrics.append(
             evaluate_query(
                 retrieved_doc_ids=retrieved_doc_ids,
@@ -92,6 +122,8 @@ def evaluate_method(
     averages = average_metrics(per_query_metrics)
     averages["method"] = method
     averages["num_queries"] = len(query_items)
+    averages["top_k"] = "none" if top_k is None else str(top_k)
+    averages["threshold"] = threshold
     return averages
 
 
@@ -100,11 +132,16 @@ def save_report(rows: list[dict[str, float]], path: Path = REPORT_PATH) -> None:
     fieldnames = [
         "method",
         "num_queries",
+        "top_k",
+        "threshold",
+        "precision",
+        "recall",
+        "average_precision",
+        "map",
         "precision@5",
         "recall@5",
         "precision@10",
         "recall@10",
-        "map",
         "ndcg@5",
         "ndcg@10",
     ]
@@ -120,35 +157,43 @@ def print_report(rows: list[dict[str, float]]) -> None:
     headers = [
         "method",
         "num_queries",
-        "precision@5",
-        "recall@5",
+        "top_k",
+        "threshold",
+        "precision",
+        "recall",
         "map",
         "ndcg@10",
     ]
     print(" | ".join(header.ljust(12) for header in headers))
-    print("-" * 86)
+    print("-" * 122)
     for row in rows:
         values = [
             str(row.get("method", "")).ljust(12),
             str(row.get("num_queries", "")).ljust(12),
-            f"{row.get('precision@5', 0.0):.4f}".ljust(12),
-            f"{row.get('recall@5', 0.0):.4f}".ljust(12),
+            str(row.get("top_k", "")).ljust(12),
+            f"{row.get('threshold', 0.0):.4f}".ljust(12),
+            f"{row.get('precision', 0.0):.4f}".ljust(12),
+            f"{row.get('recall', 0.0):.4f}".ljust(12),
             f"{row.get('map', 0.0):.4f}".ljust(12),
             f"{row.get('ndcg@10', 0.0):.4f}".ljust(12),
         ]
         print(" | ".join(values))
 
 
-def main():
+def main() -> None:
+    configure_utf8_stdout()
+
     parser = argparse.ArgumentParser(description="Evaluate retrieval methods")
     parser.add_argument("--method", choices=["boolean", "tfidf", "bm25", "all"], default="all")
-    parser.add_argument("--top_k", type=int, default=10)
+    parser.add_argument("--top_k", default="10")
+    parser.add_argument("--threshold", type=float, default=0.0)
     parser.add_argument("--max_queries", type=int, default=DEFAULT_MAX_QUERIES)
     parser.add_argument("--corpus_path", default="data/processed/corpus.json")
     parser.add_argument("--queries_path", default="data/processed/queries.json")
     parser.add_argument("--qrels_path", default="data/processed/qrels.json")
     args = parser.parse_args()
 
+    top_k = parse_top_k(args.top_k)
     corpus = load_json(args.corpus_path)
     queries = load_json(args.queries_path)
     qrels = load_json(args.qrels_path)
@@ -158,6 +203,11 @@ def main():
         print("Dang evaluation tren toan bo query.")
     else:
         print(f"Dang evaluation tren {max_queries} query dau tien. Dung --max_queries 0 de chay full.")
+
+    if top_k is None:
+        print(f"Che do retrieval: top_k=None, giu toan bo ket qua co score > {args.threshold}.")
+    else:
+        print(f"Che do retrieval: top_k={top_k}, threshold={args.threshold}.")
 
     methods = ["boolean", "tfidf", "bm25"] if args.method == "all" else [args.method]
     report_rows = []
@@ -169,7 +219,8 @@ def main():
                 corpus=corpus,
                 queries=queries,
                 qrels=qrels,
-                top_k=args.top_k,
+                top_k=top_k,
+                threshold=args.threshold,
                 max_queries=max_queries,
             )
         )

@@ -4,9 +4,9 @@ from src.retrieval.boolean_retrieval import BooleanRetriever
 
 def build_sample_index() -> InvertedIndex:
     corpus = {
-        "1": "Điều kiện kết hôn theo pháp luật Việt Nam",
-        "2": "Người lao động được nghỉ hằng năm",
-        "3": "Quy định về hợp đồng lao động",
+        "1": "Dieu kien ket hon theo phap luat Viet Nam",
+        "2": "Nguoi lao dong duoc nghi hang nam",
+        "3": "Quy dinh ve hop dong lao dong",
     }
     index = InvertedIndex()
     index.build(corpus)
@@ -15,20 +15,20 @@ def build_sample_index() -> InvertedIndex:
 
 def test_inverted_index_postings():
     index = build_sample_index()
-    postings = index.get_postings("kết hôn")
+    postings = index.get_postings("ket hon")
     assert "1" in postings
 
 
 def test_boolean_search_and():
     retriever = BooleanRetriever(build_sample_index())
-    results = retriever.search("điều kiện kết hôn", top_k=5)
+    results = retriever.search("dieu kien ket hon", top_k=5)
     doc_ids = [item["doc_id"] for item in results]
     assert "1" in doc_ids
 
 
 def test_boolean_search_or():
     retriever = BooleanRetriever(build_sample_index())
-    results = retriever.search("kết hôn OR lao động", top_k=5)
+    results = retriever.search("ket hon OR lao dong", top_k=5)
     doc_ids = [item["doc_id"] for item in results]
     assert "1" in doc_ids
     assert "2" in doc_ids
@@ -36,15 +36,15 @@ def test_boolean_search_or():
 
 def test_boolean_search_not():
     corpus = {
-        "1": "Điều kiện kết hôn theo pháp luật Việt Nam",
-        "2": "Ly hôn và chia tài sản chung",
-        "3": "Quy định về hợp đồng lao động",
+        "1": "Dieu kien ket hon theo phap luat Viet Nam",
+        "2": "Ly hon va chia tai san chung",
+        "3": "Quy dinh ve hop dong lao dong",
     }
     index = InvertedIndex()
     index.build(corpus)
     retriever = BooleanRetriever(index)
 
-    results = retriever.search("kết hôn NOT ly", top_k=5)
+    results = retriever.search("ket hon NOT ly", top_k=5)
     doc_ids = [item["doc_id"] for item in results]
 
     assert "1" in doc_ids
@@ -53,10 +53,18 @@ def test_boolean_search_not():
 
 def test_boolean_search_or_lowercase():
     retriever = BooleanRetriever(build_sample_index())
-    results = retriever.search("kết hôn or lao động", top_k=5)
+    results = retriever.search("ket hon or lao dong", top_k=5)
     doc_ids = [item["doc_id"] for item in results]
     assert "1" in doc_ids
     assert "2" in doc_ids
+
+
+def test_boolean_search_supports_top_k_none_and_threshold():
+    retriever = BooleanRetriever(build_sample_index())
+    results = retriever.search("ket hon OR lao dong", top_k=None, threshold=1.0)
+
+    assert [item["doc_id"] for item in results] == ["1", "2", "3"]
+    assert all(item["score"] > 1.0 for item in results)
 
 
 def test_inverted_index_save_pickle_and_load(tmp_path):
@@ -66,4 +74,4 @@ def test_inverted_index_save_pickle_and_load(tmp_path):
 
     loaded = InvertedIndex.load_pickle(pickle_path)
 
-    assert "1" in loaded.get_postings("kết hôn")
+    assert "1" in loaded.get_postings("ket hon")

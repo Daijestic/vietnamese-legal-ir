@@ -11,8 +11,6 @@ from src.utils.console import configure_utf8_stdout
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 CORPUS_PATH = ROOT_DIR / "data" / "processed" / "corpus.json"
-QUERIES_PATH = ROOT_DIR / "data" / "processed" / "queries.json"
-QRELS_PATH = ROOT_DIR / "data" / "processed" / "qrels.json"
 INDEX_JSON_PATH = ROOT_DIR / "outputs" / "indexes" / "inverted_index.json"
 INDEX_PKL_PATH = ROOT_DIR / "outputs" / "indexes" / "inverted_index.pkl"
 TFIDF_MODEL_PATH = ROOT_DIR / "outputs" / "indexes" / "tfidf_model.pkl"
@@ -25,16 +23,12 @@ def load_corpus(path: Path) -> dict[str, str]:
 
 
 def ensure_processed_data() -> None:
-    missing_paths = [path for path in (CORPUS_PATH, QUERIES_PATH, QRELS_PATH) if not path.exists()]
-    if not missing_paths:
+    if CORPUS_PATH.exists():
         print("[SKIP] corpus.json already exists")
-        print("[SKIP] queries.json already exists")
-        print("[SKIP] qrels.json already exists")
         return
 
-    missing_display = ", ".join(str(path.relative_to(ROOT_DIR)) for path in missing_paths)
     raise FileNotFoundError(
-        f"Missing processed data files: {missing_display}\n"
+        f"Missing processed data file: {CORPUS_PATH.relative_to(ROOT_DIR)}\n"
         "Hay chay: python -m src.data.prepare_data"
     )
 
@@ -94,9 +88,17 @@ def build_or_load_index(corpus: dict[str, str], force: bool) -> InvertedIndex:
 
 
 def build_or_skip_tfidf(corpus: dict[str, str], force: bool) -> None:
+    expected_num_docs = len(corpus)
+
     if TFIDF_MODEL_PATH.exists() and not force:
-        print("[SKIP] tfidf_model.pkl already exists")
-        return
+        try:
+            retriever = TfidfRetriever.load(TFIDF_MODEL_PATH)
+            if retriever.num_docs == expected_num_docs:
+                print("[SKIP] tfidf_model.pkl already exists")
+                return
+            print("[BUILD] tfidf_model.pkl is out of date. Rebuilding...")
+        except Exception:
+            print("[BUILD] tfidf_model.pkl could not be loaded. Rebuilding...")
 
     print("[BUILD] fitting TF-IDF...")
     retriever = TfidfRetriever()
@@ -106,9 +108,17 @@ def build_or_skip_tfidf(corpus: dict[str, str], force: bool) -> None:
 
 
 def build_or_skip_bm25(corpus: dict[str, str], force: bool) -> None:
+    expected_num_docs = len(corpus)
+
     if BM25_MODEL_PATH.exists() and not force:
-        print("[SKIP] bm25_model.pkl already exists")
-        return
+        try:
+            retriever = BM25Retriever.load(BM25_MODEL_PATH)
+            if retriever.num_docs == expected_num_docs:
+                print("[SKIP] bm25_model.pkl already exists")
+                return
+            print("[BUILD] bm25_model.pkl is out of date. Rebuilding...")
+        except Exception:
+            print("[BUILD] bm25_model.pkl could not be loaded. Rebuilding...")
 
     print("[BUILD] fitting BM25...")
     retriever = BM25Retriever()

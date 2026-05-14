@@ -1,28 +1,34 @@
 import math
 
 
+def precision(retrieved: list[str], relevant: set[str]) -> float:
+    if not retrieved or not relevant:
+        return 0.0
+
+    hits = sum(1 for doc_id in retrieved if doc_id in relevant)
+    return hits / len(retrieved)
+
+
+def recall(retrieved: list[str], relevant: set[str]) -> float:
+    if not relevant:
+        return 0.0
+    if not retrieved:
+        return 0.0
+
+    hits = sum(1 for doc_id in retrieved if doc_id in relevant)
+    return hits / len(relevant)
+
+
 def precision_at_k(retrieved: list[str], relevant: set[str], k: int) -> float:
     if k <= 0:
         return 0.0
-
-    top_k = retrieved[:k]
-    if not top_k:
-        return 0.0
-
-    hits = sum(1 for doc_id in top_k if doc_id in relevant)
-    return hits / k
+    return precision(retrieved[:k], relevant)
 
 
 def recall_at_k(retrieved: list[str], relevant: set[str], k: int) -> float:
-    if not relevant or k <= 0:
+    if k <= 0:
         return 0.0
-
-    top_k = retrieved[:k]
-    if not top_k:
-        return 0.0
-
-    hits = sum(1 for doc_id in top_k if doc_id in relevant)
-    return hits / len(relevant)
+    return recall(retrieved[:k], relevant)
 
 
 def average_precision(retrieved: list[str], relevant: set[str], k: int | None = None) -> float:
@@ -35,11 +41,18 @@ def average_precision(retrieved: list[str], relevant: set[str], k: int | None = 
 
     precision_sum = 0.0
     hit_count = 0
+    seen = set()
 
     for rank, doc_id in enumerate(ranked_docs, start=1):
-        if doc_id in relevant:
-            hit_count += 1
-            precision_sum += hit_count / rank
+        if doc_id in seen:
+            continue
+        seen.add(doc_id)
+
+        if doc_id not in relevant:
+            continue
+
+        hit_count += 1
+        precision_sum += hit_count / rank
 
     if hit_count == 0:
         return 0.0
@@ -70,7 +83,6 @@ def ndcg_at_k(retrieved: list[str], relevant: set[str], k: int) -> float:
     ideal_ranking = [f"rel_{idx}" for idx in range(ideal_hits)]
     ideal_relevant = set(ideal_ranking)
     ideal_dcg = dcg_at_k(ideal_ranking, ideal_relevant, k)
-
     if ideal_dcg == 0:
         return 0.0
 
@@ -83,14 +95,19 @@ def evaluate_query(
     k_values: list[int] | None = None,
 ) -> dict[str, float]:
     k_values = k_values or [5, 10]
-    metrics = {}
+
+    metrics = {
+        "precision": precision(retrieved_doc_ids, relevant_doc_ids),
+        "recall": recall(retrieved_doc_ids, relevant_doc_ids),
+        "average_precision": average_precision(retrieved_doc_ids, relevant_doc_ids),
+    }
+    metrics["map"] = metrics["average_precision"]
 
     for k in k_values:
         metrics[f"precision@{k}"] = precision_at_k(retrieved_doc_ids, relevant_doc_ids, k)
         metrics[f"recall@{k}"] = recall_at_k(retrieved_doc_ids, relevant_doc_ids, k)
         metrics[f"ndcg@{k}"] = ndcg_at_k(retrieved_doc_ids, relevant_doc_ids, k)
 
-    metrics["map"] = average_precision(retrieved_doc_ids, relevant_doc_ids)
     return metrics
 
 

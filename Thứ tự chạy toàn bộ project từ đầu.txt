@@ -1,0 +1,43 @@
+Thứ tự chạy toàn bộ project từ đầu hiện tại là:
+
+```bash
+# 1) Cài môi trường
+python -m venv .venv
+
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+
+# 2) Cài thư viện
+pip install -r requirements.txt
+
+# 3) Chuẩn bị dữ liệu
+python src/data/prepare_data.py
+
+# 4) Build inverted index
+python src/indexing/inverted_index.py
+
+# 5) Chạy CLI tìm kiếm
+python src/app/cli.py --query "điều kiện kết hôn" --method bm25 --top_k 5
+
+# 6) Chạy evaluation
+python src/evaluation/evaluate.py
+```
+
+Nếu muốn build đầy đủ artifact để demo nhanh hơn sau đó, chạy thêm:
+
+```bash
+python -m src.indexing.build_retrieval_models
+```
+
+Nếu muốn mở giao diện Streamlit:
+
+```bash
+streamlit run src/app/demo_streamlit.py
+```
+
+Ghi chú ngắn:
+- `evaluate.py` hiện mặc định chạy `100` query đầu để xong nhanh.
+- Muốn evaluation full dataset:
+```bash
+python src/evaluation/evaluate.py --max_queries 0
+```

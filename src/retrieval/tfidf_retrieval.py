@@ -39,12 +39,8 @@ class TfidfRetriever:
 
             term_counts = Counter(tokens)
             doc_length = len(tokens)
-            tf = {
-                term: count / doc_length
-                for term, count in term_counts.items()
-            }
+            tf = {term: count / doc_length for term, count in term_counts.items()}
             doc_term_freqs[doc_id] = tf
-
             document_frequency.update(term_counts.keys())
 
         self.document_frequency = dict(document_frequency)
@@ -56,12 +52,8 @@ class TfidfRetriever:
 
         self.doc_vectors = {}
         self.doc_norms = {}
-
         for doc_id, tf_weights in doc_term_freqs.items():
-            vector = {
-                term: tf_value * self.idf[term]
-                for term, tf_value in tf_weights.items()
-            }
+            vector = {term: tf_value * self.idf[term] for term, tf_value in tf_weights.items()}
             norm = math.sqrt(sum(weight * weight for weight in vector.values()))
             self.doc_vectors[doc_id] = vector
             self.doc_norms[doc_id] = norm
@@ -78,12 +70,39 @@ class TfidfRetriever:
             return {}
 
         query_length = sum(counts.values())
-        return {
-            term: (count / query_length) * self.idf[term]
-            for term, count in counts.items()
-        }
+        return {term: (count / query_length) * self.idf[term] for term, count in counts.items()}
 
-    def search(self, query: str, top_k: int = 10) -> list[dict]:
+    @staticmethod
+    def _finalize_results(
+        scored_results: list[dict],
+        top_k: int | None,
+        threshold: float,
+    ) -> list[dict]:
+        filtered_results = [item for item in scored_results if item["score"] > threshold]
+        if not filtered_results:
+            return []
+
+        if top_k is None:
+            filtered_results.sort(key=lambda item: (-item["score"], item["doc_id"]))
+            return filtered_results
+
+        if top_k <= 0:
+            return []
+
+        top_results = heapq.nlargest(
+            min(top_k, len(filtered_results)),
+            filtered_results,
+            key=lambda item: (item["score"], item["doc_id"]),
+        )
+        top_results.sort(key=lambda item: (-item["score"], item["doc_id"]))
+        return top_results
+
+    def search(
+        self,
+        query: str,
+        top_k: int | None = 10,
+        threshold: float = 0.0,
+    ) -> list[dict]:
         query_vector = self._vectorize_query(query)
         if not query_vector:
             return []
@@ -97,9 +116,6 @@ class TfidfRetriever:
             for doc_id, doc_weight in self.postings.get(term, {}).items():
                 dot_products[doc_id] += query_weight * doc_weight
 
-        if not dot_products:
-            return []
-
         scored_results = []
         for doc_id, dot_product in dot_products.items():
             doc_norm = self.doc_norms.get(doc_id, 0.0)
@@ -107,25 +123,18 @@ class TfidfRetriever:
                 continue
 
             score = dot_product / (query_norm * doc_norm)
-            if score > 0:
-                scored_results.append(
-                    {
-                        "doc_id": doc_id,
-                        "score": float(score),
-                        "method": "tfidf",
-                    }
-                )
+            if score <= 0:
+                continue
 
-        if not scored_results:
-            return []
+            scored_results.append(
+                {
+                    "doc_id": doc_id,
+                    "score": float(score),
+                    "method": "tfidf",
+                }
+            )
 
-        top_results = heapq.nlargest(
-            min(top_k, len(scored_results)),
-            scored_results,
-            key=lambda item: item["score"],
-        )
-        top_results.sort(key=lambda item: (-item["score"], item["doc_id"]))
-        return top_results
+        return self._finalize_results(scored_results, top_k=top_k, threshold=threshold)
 
     def save(self, path: str | Path) -> None:
         output_path = Path(path)
@@ -139,10 +148,7 @@ class TfidfRetriever:
             "idf": self.idf,
             "doc_vectors": self.doc_vectors,
             "doc_norms": self.doc_norms,
-            "postings": {
-                term: doc_map
-                for term, doc_map in self.postings.items()
-            },
+            "postings": {term: doc_map for term, doc_map in self.postings.items()},
         }
 
         if output_path.suffix.lower() == ".json":
@@ -180,20 +186,21 @@ def load_corpus(path: str | Path) -> dict[str, str]:
         return json.load(file)
 
 
-def main():
+def main() -> None:
     configure_utf8_stdout()
 
     parser = argparse.ArgumentParser(description="TF-IDF retrieval CLI test")
     parser.add_argument("--corpus_path", default="data/processed/corpus.json")
-    parser.add_argument("--query", default="điều kiện kết hôn")
+    parser.add_argument("--query", default="dieu kien ket hon")
     parser.add_argument("--top_k", type=int, default=10)
+    parser.add_argument("--threshold", type=float, default=0.0)
     args = parser.parse_args()
 
     corpus = load_corpus(args.corpus_path)
     retriever = TfidfRetriever()
     retriever.fit(corpus)
 
-    results = retriever.search(args.query, top_k=args.top_k)
+    results = retriever.search(args.query, top_k=args.top_k, threshold=args.threshold)
 
     print(f"Query: {args.query}")
     print(f"Top {args.top_k} ket qua:")

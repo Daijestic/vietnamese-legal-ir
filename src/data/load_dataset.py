@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 
@@ -51,12 +50,7 @@ def load_legal_dataset(dataset_name: str = DATASET_NAME):
     except Exception:
         pass
 
-    offline_env_keys = ("HF_DATASETS_OFFLINE", "HF_HUB_OFFLINE")
-    previous_env = {key: os.environ.get(key) for key in offline_env_keys}
-
     try:
-        os.environ["HF_DATASETS_OFFLINE"] = "1"
-        os.environ["HF_HUB_OFFLINE"] = "1"
         from datasets import DownloadConfig, load_dataset
 
         local_only_config = DownloadConfig(local_files_only=True)
@@ -65,17 +59,12 @@ def load_legal_dataset(dataset_name: str = DATASET_NAME):
         return dataset
     except Exception:
         pass
-    finally:
-        for key, value in previous_env.items():
-            if value is None:
-                os.environ.pop(key, None)
-            else:
-                os.environ[key] = value
 
     try:
-        from datasets import load_dataset
+        from datasets import DownloadConfig, load_dataset
 
-        dataset = load_dataset(dataset_name)
+        online_config = DownloadConfig(local_files_only=False)
+        dataset = load_dataset(dataset_name, download_config=online_config)
         print("Da load dataset tu Hugging Face Hub.")
         return dataset
     except Exception as exc:
