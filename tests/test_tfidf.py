@@ -27,7 +27,7 @@ def test_tfidf_returns_empty_for_unknown_query():
     assert results == []
 
 
-def test_tfidf_supports_top_k_none_and_threshold():
+def test_tfidf_respects_top_k():
     corpus = {
         "1": "dieu kien ket hon ket hon",
         "2": "dieu kien ket hon",
@@ -36,11 +36,10 @@ def test_tfidf_supports_top_k_none_and_threshold():
     retriever = TfidfRetriever()
     retriever.fit(corpus)
 
-    results = retriever.search("dieu kien ket hon", top_k=None, threshold=0.3)
+    results = retriever.search("dieu kien ket hon", top_k=1)
 
-    assert {item["doc_id"] for item in results} == {"1", "2"}
-    assert results[0]["score"] >= results[1]["score"]
-    assert all(item["score"] > 0.3 for item in results)
+    assert len(results) == 1
+    assert results[0]["doc_id"] in {"1", "2"}
 
 
 def test_tfidf_save_and_load(tmp_path):

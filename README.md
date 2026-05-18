@@ -171,9 +171,7 @@ CLI hỗ trợ:
 
 - `--method {boolean,tfidf,bm25}`
 - `--query`
-- `--top_k <int|none>`
-- `--threshold <float>`
-- `--display_limit <int>` mặc định `20`
+- `--top_k <int>`
 
 ### Search top 5
 
@@ -181,16 +179,9 @@ CLI hỗ trợ:
 python -m src.app.cli --method bm25 --query "điều kiện kết hôn" --top_k 5
 ```
 
-### Search không giới hạn top_k, dùng threshold
+Semantics của `search(query, top_k=10)`:
 
-```powershell
-python -m src.app.cli --method bm25 --query "điều kiện kết hôn" --top_k none --threshold 1.5 --display_limit 20
-```
-
-Semantics của `search(query, top_k=10, threshold=0.0)`:
-
-- nếu `top_k` là số nguyên: trả đúng Top-K
-- nếu `top_k=None`: trả toàn bộ document có `score > threshold`
+- trả đúng Top-K theo score giảm dần
 - Boolean: score = số token query match
 - TF-IDF: score = cosine similarity
 - BM25: score = BM25 score
@@ -204,32 +195,21 @@ Evaluation dùng:
 
 Metrics hỗ trợ:
 
-- `Precision`
-- `Recall`
-- `Average Precision`
-- `Precision@5`
-- `Recall@5`
 - `Precision@10`
 - `Recall@10`
-- `nDCG@5`
-- `nDCG@10`
 - `MAP` (mean của average precision theo query)
+- `nDCG@10`
 
 Lưu ý:
 
 - không giả định mỗi query chỉ có 1 relevant document
-- `Recall = số relevant doc tìm được / tổng số relevant doc của query`
+- `Precision@10 = số relevant doc trong top 10 / 10`
+- `Recall@10 = số relevant doc trong top 10 / tổng số relevant doc của query`
 
 ### Evaluate với top_k = 10
 
 ```powershell
 python -m src.evaluation.evaluate --method all --top_k 10 --max_queries 100
-```
-
-### Evaluate với top_k = none
-
-```powershell
-python -m src.evaluation.evaluate --method all --top_k none --threshold 1.5 --max_queries 100
 ```
 
 Output:
@@ -247,9 +227,7 @@ python -m src.indexing.build_retrieval_models
 python -m src.app.cli --method boolean --query "điều kiện kết hôn" --top_k 5
 python -m src.app.cli --method tfidf --query "điều kiện kết hôn" --top_k 5
 python -m src.app.cli --method bm25 --query "điều kiện kết hôn" --top_k 5
-python -m src.app.cli --method bm25 --query "điều kiện kết hôn" --top_k none --threshold 1.5 --display_limit 20
 python -m src.evaluation.evaluate --method all --top_k 10 --max_queries 100
-python -m src.evaluation.evaluate --method all --top_k none --threshold 1.5 --max_queries 100
 ```
 
 ## Test

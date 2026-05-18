@@ -51,14 +51,11 @@ def test_dcg_and_ndcg():
 
 
 def test_evaluate_query_handles_empty_inputs():
-    metrics = evaluate_query([], set(), k_values=[5, 10])
+    metrics = evaluate_query([], set(), k=10)
 
-    assert metrics["precision"] == 0.0
-    assert metrics["recall"] == 0.0
-    assert metrics["average_precision"] == 0.0
     assert metrics["map"] == 0.0
-    assert metrics["precision@5"] == 0.0
-    assert metrics["recall@5"] == 0.0
+    assert metrics["precision@10"] == 0.0
+    assert metrics["recall@10"] == 0.0
     assert metrics["ndcg@10"] == 0.0
 
 
@@ -66,8 +63,8 @@ def test_evaluate_query_handles_multiple_relevant_documents():
     retrieved = ["d3", "d1", "d5", "d2"]
     relevant = {"d1", "d2", "d4", "d5"}
 
-    metrics = evaluate_query(retrieved, relevant, k_values=[5, 10])
+    metrics = evaluate_query(retrieved, relevant, k=10)
 
-    assert metrics["precision"] == pytest.approx(3 / 4)
-    assert metrics["recall"] == pytest.approx(3 / 4)
-    assert metrics["average_precision"] == pytest.approx(((1 / 2) + (2 / 3) + (3 / 4)) / 4)
+    assert metrics["precision@10"] == pytest.approx(3 / 10)
+    assert metrics["recall@10"] == pytest.approx(3 / 4)
+    assert metrics["map"] == pytest.approx(((1 / 2) + (2 / 3) + (3 / 4)) / 4)

@@ -59,12 +59,12 @@ def test_boolean_search_or_lowercase():
     assert "2" in doc_ids
 
 
-def test_boolean_search_supports_top_k_none_and_threshold():
+def test_boolean_search_respects_top_k():
     retriever = BooleanRetriever(build_sample_index())
-    results = retriever.search("ket hon OR lao dong", top_k=None, threshold=1.0)
+    results = retriever.search("ket hon OR lao dong", top_k=2)
 
-    assert [item["doc_id"] for item in results] == ["1", "2", "3"]
-    assert all(item["score"] > 1.0 for item in results)
+    assert len(results) == 2
+    assert [item["doc_id"] for item in results] == ["1", "2"]
 
 
 def test_inverted_index_save_pickle_and_load(tmp_path):

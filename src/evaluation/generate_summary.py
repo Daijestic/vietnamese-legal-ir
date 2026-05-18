@@ -26,16 +26,16 @@ def build_summary(rows: list[dict[str, str]]) -> str:
         f"- Best MAP: **{best_map['method']}** ({float(best_map['map']):.4f})",
         f"- Best nDCG@10: **{best_ndcg['method']}** ({float(best_ndcg['ndcg@10']):.4f})",
         "",
-        "| Method | Precision@5 | Recall@5 | MAP | nDCG@10 |",
+        "| Method | Precision@10 | Recall@10 | MAP | nDCG@10 |",
         "|---|---:|---:|---:|---:|",
     ]
 
     for row in rows:
         lines.append(
-            "| {method} | {p5:.4f} | {r5:.4f} | {map_score:.4f} | {ndcg10:.4f} |".format(
+            "| {method} | {p10:.4f} | {r10:.4f} | {map_score:.4f} | {ndcg10:.4f} |".format(
                 method=row["method"],
-                p5=float(row.get("precision@5", 0.0)),
-                r5=float(row.get("recall@5", 0.0)),
+                p10=float(row.get("precision@10", 0.0)),
+                r10=float(row.get("recall@10", 0.0)),
                 map_score=float(row.get("map", 0.0)),
                 ndcg10=float(row.get("ndcg@10", 0.0)),
             )

@@ -20,9 +20,10 @@ def recall(retrieved: list[str], relevant: set[str]) -> float:
 
 
 def precision_at_k(retrieved: list[str], relevant: set[str], k: int) -> float:
-    if k <= 0:
+    if k <= 0 or not relevant:
         return 0.0
-    return precision(retrieved[:k], relevant)
+    hits = sum(1 for doc_id in retrieved[:k] if doc_id in relevant)
+    return hits / k
 
 
 def recall_at_k(retrieved: list[str], relevant: set[str], k: int) -> float:
@@ -92,26 +93,17 @@ def ndcg_at_k(retrieved: list[str], relevant: set[str], k: int) -> float:
 def evaluate_query(
     retrieved_doc_ids: list[str],
     relevant_doc_ids: set[str],
-    k_values: list[int] | None = None,
+    k: int = 10,
 ) -> dict[str, float]:
-    k_values = k_values or [5, 10]
-
-    metrics = {
-        "precision": precision(retrieved_doc_ids, relevant_doc_ids),
-        "recall": recall(retrieved_doc_ids, relevant_doc_ids),
-        "average_precision": average_precision(retrieved_doc_ids, relevant_doc_ids),
+    return {
+        f"precision@{k}": precision_at_k(retrieved_doc_ids, relevant_doc_ids, k),
+        f"recall@{k}": recall_at_k(retrieved_doc_ids, relevant_doc_ids, k),
+        "map": average_precision(retrieved_doc_ids, relevant_doc_ids),
+        f"ndcg@{k}": ndcg_at_k(retrieved_doc_ids, relevant_doc_ids, k),
     }
-    metrics["map"] = metrics["average_precision"]
-
-    for k in k_values:
-        metrics[f"precision@{k}"] = precision_at_k(retrieved_doc_ids, relevant_doc_ids, k)
-        metrics[f"recall@{k}"] = recall_at_k(retrieved_doc_ids, relevant_doc_ids, k)
-        metrics[f"ndcg@{k}"] = ndcg_at_k(retrieved_doc_ids, relevant_doc_ids, k)
-
-    return metrics
 
 
 if __name__ == "__main__":
     retrieved = ["d1", "d2", "d3", "d4"]
     relevant = {"d1", "d3"}
-    print(evaluate_query(retrieved, relevant, k_values=[5, 10]))
+    print(evaluate_query(retrieved, relevant, k=10))

@@ -23,7 +23,7 @@ from src.utils.console import configure_utf8_stdout
 DEFAULT_RAW_DATASET_NAME = "tmnam20/BKAI-Legal-Retrieval"
 DEFAULT_EVAL_DATASET_NAME = "YuITC/Vietnamese-Legal-Documents"
 
-PROCESSED_DIR = Path("data/processed")
+PROCESSED_DIR = ROOT_DIR / "data" / "processed"
 CORPUS_PATH = PROCESSED_DIR / "corpus.json"
 QUERIES_PATH = PROCESSED_DIR / "queries.json"
 QRELS_PATH = PROCESSED_DIR / "qrels.json"

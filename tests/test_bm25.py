@@ -27,7 +27,7 @@ def test_bm25_returns_empty_for_unknown_query():
     assert results == []
 
 
-def test_bm25_supports_top_k_none_and_threshold():
+def test_bm25_respects_top_k():
     corpus = {
         "1": "dieu kien ket hon ket hon",
         "2": "dieu kien ket hon",
@@ -36,10 +36,10 @@ def test_bm25_supports_top_k_none_and_threshold():
     retriever = BM25Retriever()
     retriever.fit(corpus)
 
-    results = retriever.search("dieu kien ket hon", top_k=None, threshold=0.5)
+    results = retriever.search("dieu kien ket hon", top_k=1)
 
-    assert [item["doc_id"] for item in results] == ["1", "2"]
-    assert all(item["score"] > 0.5 for item in results)
+    assert len(results) == 1
+    assert results[0]["doc_id"] == "1"
 
 
 def test_bm25_save_and_load(tmp_path):

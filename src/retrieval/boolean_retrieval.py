@@ -62,8 +62,7 @@ class BooleanRetriever:
     def search(
         self,
         query: str,
-        top_k: int | None = 10,
-        threshold: float = 0.0,
+        top_k: int = 10,
     ) -> list[dict]:
         raw_query = query.strip()
         if not raw_query:
@@ -91,14 +90,8 @@ class BooleanRetriever:
                 return []
             matched_docs = self._and_search(query_tokens)
 
-        ranked_results = [
-            item
-            for item in self._score_docs(matched_docs, query_tokens)
-            if item["score"] > threshold
-        ]
+        ranked_results = self._score_docs(matched_docs, query_tokens)
 
-        if top_k is None:
-            return ranked_results
         if top_k <= 0:
             return []
         return ranked_results[:top_k]
@@ -115,7 +108,6 @@ def main() -> None:
     )
     parser.add_argument("--query", default="dieu kien ket hon", help="Cau truy van")
     parser.add_argument("--top_k", type=int, default=10, help="So ket qua tra ve")
-    parser.add_argument("--threshold", type=float, default=0.0, help="Nguong score toi thieu")
     args = parser.parse_args()
 
     index_path = Path(args.index_path)
@@ -126,7 +118,7 @@ def main() -> None:
 
     index = InvertedIndex.load(index_path)
     retriever = BooleanRetriever(index)
-    results = retriever.search(args.query, top_k=args.top_k, threshold=args.threshold)
+    results = retriever.search(args.query, top_k=args.top_k)
 
     print(f"Query: {args.query}")
     print(f"Top {args.top_k} ket qua:")
